@@ -1,0 +1,111 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "radxa,rockpis", "rockchip,rk3308";
+
+    /* Preserve the existing PCM5102A I2S DAC configuration. */
+    fragment@0 {
+        target = <&i2s_8ch_0>;
+
+        __overlay__ {
+            #sound-dai-cells = <0>;
+            rockchip,always-on;
+            status = "okay";
+        };
+    };
+
+    fragment@1 {
+        target = <&i2s_8ch_2>;
+
+        __overlay__ {
+            #sound-dai-cells = <0>;
+            status = "disabled";
+        };
+    };
+
+    /* Add SPDIF RX, its stub codec endpoint, and both audio cards. */
+    fragment@2 {
+        target-path = "/";
+
+        __overlay__ {
+            spdif_rx: spdif-rx@ff3b0000 {
+                compatible = "rockchip,rk3308-spdifrx";
+                reg = <0x0 0xff3b0000 0x0 0x1000>;
+                interrupt-parent = <&gic>;
+                interrupts = <0x0 56 0x4>;
+                clocks = <&cru 101>, <&cru 163>;
+                clock-names = "mclk", "hclk";
+                dmas = <&dmac1 14>;
+                dma-names = "rx";
+                resets = <&cru 135>;
+                reset-names = "spdifrx-m";
+                pinctrl-names = "default";
+                pinctrl-0 = <&spdif_in>;
+                #sound-dai-cells = <0>;
+                status = "okay";
+            };
+
+            spdif_dir: spdif-dir {
+                compatible = "linux,spdif-dir";
+                #sound-dai-cells = <0>;
+                status = "okay";
+            };
+
+            i2s0_out: i2s0-out {
+                #sound-dai-cells = <0>;
+                compatible = "ti,pcm5102a";
+                status = "okay";
+            };
+
+            sound_i2s {
+                compatible = "simple-audio-card";
+                simple-audio-card,name = "DAC";
+                simple-audio-card,format = "i2s";
+                simple-audio-card,bitclock-master = <&cpu_dai>;
+                simple-audio-card,frame-master = <&cpu_dai>;
+                simple-audio-card,mclk-fs = <256>;
+                status = "okay";
+
+                cpu_dai: simple-audio-card,cpu {
+                    sound-dai = <&i2s_8ch_0>;
+                };
+
+                codec_dai: simple-audio-card,codec {
+                    sound-dai = <&i2s0_out>;
+                };
+            };
+
+            sound_spdif {
+                compatible = "simple-audio-card";
+                simple-audio-card,name = "SPDIF-IN";
+                status = "okay";
+
+                simple-audio-card,cpu {
+                    sound-dai = <&spdif_rx>;
+                };
+
+                simple-audio-card,codec {
+                    sound-dai = <&spdif_dir>;
+                };
+            };
+        };
+    };
+
+    /* Disable the onboard analog codec and its sound card. */
+    fragment@3 {
+        target-path = "/codec@ff560000";
+
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    fragment@4 {
+        target-path = "/acodec-sound";
+
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+};
