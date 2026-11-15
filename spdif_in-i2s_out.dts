@@ -54,7 +54,7 @@
 
             i2s0_out: i2s0-out {
                 #sound-dai-cells = <0>;
-                compatible = "ti,pcm5102a";
+                compatible = "maxim,max98357a";
                 status = "okay";
             };
 
